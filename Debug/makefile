@@ -60,8 +60,8 @@ all: main-build
 main-build: STM32_ADXL345_LCD.elf secondary-outputs
 
 # Tool invocations
-STM32_ADXL345_LCD.elf STM32_ADXL345_LCD.map: $(OBJS) $(USER_OBJS) C:\Users\arzam\Desktop\STM32_ADXL345_LCD\STM32_ADXL345_LCD\STM32L476VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32_ADXL345_LCD.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\arzam\Desktop\STM32_ADXL345_LCD\STM32_ADXL345_LCD\STM32L476VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_ADXL345_LCD.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+STM32_ADXL345_LCD.elf STM32_ADXL345_LCD.map: $(OBJS) $(USER_OBJS) C:\Users\arzam\Desktop\Git_stm\STM32_Accelerometer\STM32L476VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "STM32_ADXL345_LCD.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\arzam\Desktop\Git_stm\STM32_Accelerometer\STM32L476VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_ADXL345_LCD.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
