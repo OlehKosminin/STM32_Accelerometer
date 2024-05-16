@@ -17,14 +17,17 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include <stdio.h>
+#include <adxl.h>
 #include <math.h>
 #include "stm32l476g_discovery_glass_lcd.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,9 +72,15 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint8_t adxl_address = 0x32;
+
 // Flags
 uint8_t adxl_read_state = 0;
 uint8_t lcd_image_value_state = 0;
+// adxl counter state
+uint8_t adxl_counter_state = 1;
+
+uint8_t state = 0;
 
 int error = 0;
 
@@ -83,33 +92,10 @@ float acceleration = 0;
 
 char acc_conv_value[7]; // Need space for the null terminator '\0'
 
-void adxl_write (uint8_t address, uint8_t value)
-{
-	uint8_t data[2];
-	data[0] = address|0x40;  // multibyte write
-	data[1] = value;
-	// GPIO_PIN_6 Pin need for enable adxl 345 module
-	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);  // pull the cs pin low
-	HAL_SPI_Transmit  (&hspi1, data, 2, 100);  // write data to register
-	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_SET);  // pull the cs pin high
-}
+// counter
+int time_counter = 0;
 
-void adxl_read (uint8_t address)
-{
-	address |= 0x80;  // read operation
-	address |= 0x40;  // multibyte read
-	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);  // pull the pin low
-	HAL_SPI_Transmit (&hspi1, &address, 1, 100);  // send address
-	HAL_SPI_Receive (&hspi1, data_rec, 6, 100);  // receive 6 bytes data
-	HAL_GPIO_WritePin (GPIOB, GPIO_PIN_6, GPIO_PIN_SET);  // pull the pin high
-}
 
-void adxl_init (void)
-{
-	adxl_write (0x31, 0x01);  // data_format range= +- 4g
-	adxl_write (0x2d, 0x00);  // reset all bits
-	adxl_write (0x2d, 0x08);  // power_cntl measure and wake up 8hz
-}
 
 float calculate_acceleration(float x, float y, float z) {
     float acceleration = sqrt(x * x + y * y + z * z);
@@ -126,7 +112,7 @@ void callback_image_value()
 }
 
 void callback_adxl_read(){
-    adxl_read(0x32);
+    adxl_read(&hspi1,adxl_address, data_rec);
 	  x = ((data_rec[1]<<8)| data_rec[0]);
 	  y = ((data_rec[3]<<8)| data_rec[2]);
 	  z = ((data_rec[5]<<8)| data_rec[4]);
@@ -135,18 +121,25 @@ void callback_adxl_read(){
 	  yg = y * 0.0078;
 	  zg = z * 0.0078;
 }
+
 // Interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	if(htim->Instance == TIM4)
+	{
+		state = 1;
+		adxl_counter_state = 1;
+	}
+
 	if(htim->Instance == TIM6)
 	{
-	adxl_read_state=1;
+		adxl_read_state=1;
 	}
 
 	if(htim->Instance == TIM7)
 	{
-	lcd_image_value_state = 1;
-	HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
+		lcd_image_value_state = 1;
+		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
 	}
 };
 
@@ -189,6 +182,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   //Init timers
+  HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim7);
 
@@ -198,7 +192,7 @@ int main(void)
 
  // init adxl
   // !!! need to init adxl !!!
-  adxl_init();
+  adxl_init(&hspi1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -208,6 +202,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if(adxl_counter_state == 1)
+	  {
+		  time_counter ++;
+		  adxl_counter_state = 0;
+	  }
 
 	  if(adxl_read_state == 1)
 	  {
@@ -365,18 +364,24 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
   /* USER CODE BEGIN TIM4_Init 1 */
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 0;
+  htim4.Init.Prescaler = 1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 65535;
+  htim4.Init.Period = 40000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_OnePulse_Init(&htim4, TIM_OPMODE_SINGLE) != HAL_OK)
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
