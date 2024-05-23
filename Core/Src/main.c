@@ -17,16 +17,17 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include <stdio.h>
-#include <adxl.h>
-#include <math.h>
+
 #include "stm32l476g_discovery_glass_lcd.h"
+
+#include "adxl.h"
+#include "utils.h"
 
 /* USER CODE END Includes */
 
@@ -72,17 +73,17 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 uint8_t adxl_address = 0x32;
 
 // Flags
-uint8_t adxl_read_state = 0;
-uint8_t lcd_image_value_state = 0;
-// adxl counter state
-uint8_t adxl_counter_state = 1;
+uint8_t adxl_read_state = 0; // read value from adxl 3200 hz
+uint8_t lcd_image_value_state = 0; //send value to lcd 10 on 1 second
+uint8_t adxl_counter_state = 0; // counter state
+//
+// counter
+unsigned long long time_counter = 0; // count microseconds
 
-uint8_t state = 0;
-
-int error = 0;
 
 uint8_t data_rec[6]; // buffer for analog value
 int16_t  x,y,z;
@@ -92,15 +93,7 @@ float acceleration = 0;
 
 char acc_conv_value[7]; // Need space for the null terminator '\0'
 
-// counter
-int time_counter = 0;
 
-
-
-float calculate_acceleration(float x, float y, float z) {
-    float acceleration = sqrt(x * x + y * y + z * z);
-    return acceleration;
-}
 
 void callback_image_value()
 {
@@ -110,27 +103,46 @@ void callback_image_value()
 
 	BSP_LCD_GLASS_DisplayString((uint8_t *)acc_conv_value);
 }
+// rows column
+#define rows 50
+#define column 4
+
+float buffer_values[rows][column];
+
+uint8_t rows_count  = 0;
 
 void callback_adxl_read(){
     adxl_read(&hspi1,adxl_address, data_rec);
-	  x = ((data_rec[1]<<8)| data_rec[0]);
-	  y = ((data_rec[3]<<8)| data_rec[2]);
-	  z = ((data_rec[5]<<8)| data_rec[4]);
 
-	  xg = x * 0.0078;
-	  yg = y * 0.0078;
-	  zg = z * 0.0078;
+	 x = ((data_rec[1]<<8)| data_rec[0]);
+	 y = ((data_rec[3]<<8)| data_rec[2]);
+	 z = ((data_rec[5]<<8)| data_rec[4]);
+
+	 xg = x * 0.0078;
+	 yg = y * 0.0078;
+	 zg = z * 0.0078;
+
+	 if(rows_count <= rows)
+	 {
+		 buffer_values[rows_count][0] = xg;
+		 buffer_values[rows_count][1] = yg;
+		 buffer_values[rows_count][2] = zg;
+		 buffer_values[rows_count][column -1] = time_counter;// last value
+
+		 rows_count += 1;
+	 }
 }
 
 // Interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	// counter
 	if(htim->Instance == TIM4)
 	{
-		state = 1;
-		adxl_counter_state = 1;
+		lcd_image_value_state = 1;
+		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
 	}
-
+	// read from adxl
 	if(htim->Instance == TIM6)
 	{
 		adxl_read_state=1;
@@ -138,8 +150,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance == TIM7)
 	{
-		lcd_image_value_state = 1;
-		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
+		adxl_counter_state = 1;
+
 	}
 };
 
@@ -371,9 +383,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1;
+  htim4.Init.Prescaler = 8000-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 40000;
+  htim4.Init.Period = 1000-1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -415,9 +427,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 3;
+  htim6.Init.Prescaler = 25-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 64000;
+  htim6.Init.Period = 1000-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -453,9 +465,9 @@ static void MX_TIM7_Init(void)
 
   /* USER CODE END TIM7_Init 1 */
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 123;
+  htim7.Init.Prescaler = 25-1;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 64516;
+  htim7.Init.Period = 1000-1;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {

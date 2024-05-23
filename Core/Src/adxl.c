@@ -28,6 +28,7 @@ void adxl_init (SPI_HandleTypeDef *hspi)
 	adxl_write (hspi,0x31, 0x01);  // data_format range= +- 4g
 	adxl_write (hspi,0x2d, 0x00);  // reset all bits
 	adxl_write (hspi,0x2d, 0x08);  // power_cntl measure and wake up 8hz
+	adxl_write (hspi, 0x2C,0x0F);
 }
 
 
