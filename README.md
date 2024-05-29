@@ -1,3 +1,5 @@
+In this proiject I connect STM32L476G-DISCO and adxl435
+
 <!-- Hardvare connect -->
 ## Connect
 ![CONNECT](https://github.com/OlehKosminin/STM32_Accelerometer/assets/106763163/9f6901aa-1590-4fe4-b1b8-6a69dfb853b0)
@@ -33,3 +35,4 @@
   ##
 Clock Configuration
 ![image](https://github.com/OlehKosminin/STM32_Accelerometer/assets/106763163/939d2587-263d-42d5-bae0-71f831f1df12)
+
