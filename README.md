@@ -1,4 +1,4 @@
-In this proiject I connect STM32L476G-DISCO and adxl435
+In this proiject I connect STM32L476G-DISCO and adxl345
 
 <!-- Hardvare connect -->
 ## Connect
