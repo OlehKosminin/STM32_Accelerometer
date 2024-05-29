@@ -4,6 +4,10 @@ In this proiject I connect STM32L476G-DISCO and adxl345
 ## Connect
 ![CONNECT](https://github.com/OlehKosminin/STM32_Accelerometer/assets/106763163/9f6901aa-1590-4fe4-b1b8-6a69dfb853b0)
 
+Dont forgot enable CS PB6 PIN 
+![image](https://github.com/OlehKosminin/STM32_Accelerometer/assets/106763163/17b00225-d309-44a8-8947-2d0aca551ee0)
+
+
 <!-- CubeMX settings -->
     System Core
 ##
